@@ -79,6 +79,22 @@ exec(open('configurator.py').read()) # overrides from command line or config fil
 config = {k: globals()[k] for k in config_keys} # will be useful for logging
 # -----------------------------------------------------------------------------
 
+print("=" * 80)
+print("训练配置参数:")
+print(f"  数据集: {dataset}")
+print(f"  设备: {device}")
+print(f"  数据类型: {dtype}")
+print(f"  批次大小: {batch_size}")
+print(f"  上下文长度: {block_size}")
+print(f"  梯度累积步数: {gradient_accumulation_steps}")
+print(f"  模型层数: {n_layer}")
+print(f"  注意力头数: {n_head}")
+print(f"  嵌入维度: {n_embd}")
+print(f"  最大迭代次数: {max_iters}")
+print(f"  学习率: {learning_rate}")
+print(f"  编译模型: {compile}")
+print("=" * 80)
+
 # 各种初始化操作、派生属性和 I/O 设置
 ddp = int(os.environ.get('RANK', -1)) != -1  # 判断是否为 DDP 分布式训练
 if ddp:
@@ -144,7 +160,11 @@ if os.path.exists(meta_path):
     with open(meta_path, 'rb') as f:
         meta = pickle.load(f)
     meta_vocab_size = meta['vocab_size']
-    print(f"found vocab_size = {meta_vocab_size} (inside {meta_path})")
+    print(f"[数据集] 找到词汇表大小: {meta_vocab_size} (来自 {meta_path})")
+else:
+    print(f"[数据集] 未找到元数据文件: {meta_path}")
+
+print("[模型] 开始初始化模型...")
 
 # 模型初始化
 model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=block_size,
@@ -193,25 +213,35 @@ if block_size < model.config.block_size:
     model.crop_block_size(block_size)
     model_args['block_size'] = block_size # so that the checkpoint will have the right value
 model.to(device)
+print(f"[模型] 模型已移动到设备: {device}")
 
 # initialize a GradScaler. If enabled=False scaler is a no-op
 scaler = torch.cuda.amp.GradScaler(enabled=(device_type == 'cuda' and dtype == 'float16'))
+print(f"[训练] GradScaler 状态: {'启用' if scaler.is_enabled() else '禁用'}")
 
+print("[优化器] 开始配置优化器...")
 # optimizer
 optimizer = model.configure_optimizers(weight_decay, learning_rate, (beta1, beta2), device_type)
 if init_from == 'resume':
     optimizer.load_state_dict(checkpoint['optimizer'])
 checkpoint = None # free up memory
+print("[优化器] 优化器配置完成")
 
 # compile the model
 if compile:
-    print("compiling the model... (takes a ~minute)")
+    print("[编译] 开始编译模型... (可能需要约1分钟)")
     unoptimized_model = model
     model = torch.compile(model) # requires PyTorch 2.0
+    print("[编译] 模型编译完成")
 
 # wrap model into DDP container
 if ddp:
+    print(f"[分布式] 启用 DDP，设备: cuda:{ddp_local_rank}")
     model = DDP(model, device_ids=[ddp_local_rank])
+
+print("=" * 80)
+print("[训练] 开始训练循环...")
+print("=" * 80)
 
 # 通过多个批次估算训练集和验证集上的损失
 @torch.no_grad()  # 禁用梯度计算，节省内存
@@ -249,11 +279,13 @@ if wandb_log and master_process:
     wandb.init(project=wandb_project, name=wandb_run_name, config=config)
 
 # 训练循环
+print("[训练] 加载第一个训练批次...")
 X, Y = get_batch('train')               # 获取第一个训练批次
 t0 = time.time()                        # 记录开始时间
 local_iter_num = 0                      # 当前进程的迭代次数
 raw_model = model.module if ddp else model  # 获取原始模型（如果是 DDP 则解包）
 running_mfu = -1.0                      # 运行中的模型 FLOPs 利用率
+print("[训练] 训练循环准备就绪")
 
 while True:
 
@@ -325,13 +357,21 @@ while True:
         if local_iter_num >= 5:  # 让训练循环稳定后再计算 MFU
             mfu = raw_model.estimate_mfu(batch_size * gradient_accumulation_steps, dt)
             running_mfu = mfu if running_mfu == -1.0 else 0.9*running_mfu + 0.1*mfu
-        print(f"iter {iter_num}: loss {lossf:.4f}, time {dt*1000:.2f}ms, mfu {running_mfu*100:.2f}%")
+        print(f"[迭代 {iter_num}] 损失: {lossf:.4f}, 时间: {dt*1000:.2f}ms, MFU: {running_mfu*100:.2f}%, 学习率: {lr:.6f}")
     iter_num += 1
     local_iter_num += 1
 
     # 终止条件
     if iter_num > max_iters:
+        print("[训练] 达到最大迭代次数，训练结束")
         break
 
+print("=" * 80)
+print("[训练] 训练完成！")
+print(f"[训练] 总迭代次数: {iter_num}")
+print(f"[训练] 最佳验证损失: {best_val_loss:.4f}")
+print("=" * 80)
+
 if ddp:
+    print("[分布式] 清理分布式进程组")
     destroy_process_group()  # 清理分布式进程组
