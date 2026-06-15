@@ -70,8 +70,8 @@ min_lr = 6e-5                             # minimum learning rate, should be ~= 
 # DDP settings
 backend = 'nccl'                          # 'nccl', 'gloo', etc. | 分布式通信后端
 # system
-device = 'cuda'                           # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks | 设备类型
-dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'  # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler | 数据类型
+device = 'cuda' if torch.cuda.is_available() else 'cpu'  # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks | 设备类型（自动检测）
+dtype = 'bfloat16' if device == 'cuda' and torch.cuda.is_bf16_supported() else 'float32'  # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler | 数据类型（CPU 使用 float32）
 compile = True                            # use PyTorch 2.0 to compile the model to be faster | 是否使用 PyTorch 2.0 编译模型加速
 # -----------------------------------------------------------------------------
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str))]
@@ -195,7 +195,7 @@ if block_size < model.config.block_size:
 model.to(device)
 
 # initialize a GradScaler. If enabled=False scaler is a no-op
-scaler = torch.cuda.amp.GradScaler(enabled=(dtype == 'float16'))
+scaler = torch.cuda.amp.GradScaler(enabled=(device_type == 'cuda' and dtype == 'float16'))
 
 # optimizer
 optimizer = model.configure_optimizers(weight_decay, learning_rate, (beta1, beta2), device_type)
