@@ -41,7 +41,7 @@ eval_only = False                         # if True, script exits right after th
 always_save_checkpoint = True             # if True, always save a checkpoint after each eval | 是否每次评估后都保存检查点
 init_from = 'scratch'                     # 'scratch' or 'resume' or 'gpt2*' | 初始化方式: 'scratch'(从头训练) / 'resume'(从检查点恢复) / 'gpt2*'(加载GPT-2预训练权重)
 # wandb logging
-wandb_log = False                         # disabled by default | 是否使用 wandb 记录日志
+wandb_log = True                          # disabled by default | 是否使用 wandb 记录日志
 wandb_project = 'owt'                     # wandb 项目名称
 wandb_run_name = 'gpt2'                   # 'run' + str(time.time()) | wandb 运行名称
 # data
