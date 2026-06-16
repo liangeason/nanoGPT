@@ -57,7 +57,7 @@ dropout = 0.0                             # for pretraining 0 is good, for finet
 bias = False                              # do we use bias inside LayerNorm and Linear layers? | 是否在 LayerNorm 和 Linear 层使用偏置
 # adamw optimizer
 learning_rate = 6e-4                      # max learning rate | 最大学习率
-max_iters = 600000                        # total number of training iterations | 训练总迭代次数
+max_iters = 10000                         # total number of training iterations | 训练总迭代次数
 weight_decay = 1e-1                       # 权重衰减（L2 正则化）
 beta1 = 0.9                               # AdamW beta1 参数
 beta2 = 0.95                              # AdamW beta2 参数
@@ -65,7 +65,7 @@ grad_clip = 1.0                           # clip gradients at this value, or dis
 # learning rate decay settings
 decay_lr = True                           # whether to decay the learning rate | 是否使用学习率衰减
 warmup_iters = 2000                       # how many steps to warm up for | 学习率预热步数
-lr_decay_iters = 600000                   # should be ~= max_iters per Chinchilla | 学习率衰减步数（约等于 max_iters）
+lr_decay_iters = 10000                   # should be ~= max_iters per Chinchilla | 学习率衰减步数（约等于 max_iters）
 min_lr = 6e-5                             # minimum learning rate, should be ~= learning_rate/10 per Chinchilla | 最小学习率（约为最大学习率的 1/10）
 # DDP settings
 backend = 'nccl'                          # 'nccl', 'gloo', etc. | 分布式通信后端
