@@ -3,7 +3,7 @@ This training script can be run both on a single gpu in debug mode,
 and also in a larger training run with distributed data parallel (ddp).
 
 To run on a single GPU, example:
-$ python train.py --batch_size=8 --compile=False
+$ python train.py --batch_size=4 --compile=False
 
 To run with DDP on 4 gpus on 1 node, example:
 $ torchrun --standalone --nproc_per_node=4 train.py
@@ -34,9 +34,9 @@ from model import GPTConfig, GPT
 # 默认配置参数，用于在 OpenWebText 数据集上训练 GPT-2 (124M 参数)
 # I/O
 out_dir = 'out'                           # 输出目录，用于保存模型检查点
-eval_interval = 2000                      # 评估间隔（迭代次数）
+eval_interval = 10                        # 评估间隔（迭代次数）
 log_interval = 1                          # 日志打印间隔
-eval_iters = 200                          # 每次评估的批次数量
+eval_iters = 20                           # 每次评估的批次数量
 eval_only = False                         # if True, script exits right after the first eval | 如果为 True，只进行一次评估后退出
 always_save_checkpoint = True             # if True, always save a checkpoint after each eval | 是否每次评估后都保存检查点
 init_from = 'scratch'                     # 'scratch' or 'resume' or 'gpt2*' | 初始化方式: 'scratch'(从头训练) / 'resume'(从检查点恢复) / 'gpt2*'(加载GPT-2预训练权重)
@@ -47,7 +47,7 @@ wandb_run_name = 'gpt2'                   # 'run' + str(time.time()) | wandb 运
 # data
 dataset = 'nanogpt-shakespeare'                   # 数据集名称
 gradient_accumulation_steps = 5 * 8       # used to simulate larger batch sizes | 梯度累积步数，用于模拟更大的批次大小
-batch_size = 12                           # if gradient_accumulation_steps > 1, this is the micro-batch size | 微批次大小
+batch_size = 4                           # if gradient_accumulation_steps > 1, this is the micro-batch size | 微批次大小
 block_size = 1024                         # 上下文窗口长度（序列长度）
 # model
 n_layer = 12                              # Transformer 层数
@@ -57,15 +57,15 @@ dropout = 0.0                             # for pretraining 0 is good, for finet
 bias = False                              # do we use bias inside LayerNorm and Linear layers? | 是否在 LayerNorm 和 Linear 层使用偏置
 # adamw optimizer
 learning_rate = 6e-4                      # max learning rate | 最大学习率
-max_iters = 10000                         # total number of training iterations | 训练总迭代次数
+max_iters = 100                         # total number of training iterations | 训练总迭代次数
 weight_decay = 1e-1                       # 权重衰减（L2 正则化）
 beta1 = 0.9                               # AdamW beta1 参数
 beta2 = 0.95                              # AdamW beta2 参数
 grad_clip = 1.0                           # clip gradients at this value, or disable if == 0.0 | 梯度裁剪阈值（0 表示禁用）
 # learning rate decay settings
 decay_lr = True                           # whether to decay the learning rate | 是否使用学习率衰减
-warmup_iters = 2000                       # how many steps to warm up for | 学习率预热步数
-lr_decay_iters = 10000                   # should be ~= max_iters per Chinchilla | 学习率衰减步数（约等于 max_iters）
+warmup_iters = 10                        # how many steps to warm up for | 学习率预热步数
+lr_decay_iters = 100                   # should be ~= max_iters per Chinchilla | 学习率衰减步数（约等于 max_iters）
 min_lr = 6e-5                             # minimum learning rate, should be ~= learning_rate/10 per Chinchilla | 最小学习率（约为最大学习率的 1/10）
 # DDP settings
 backend = 'nccl'                          # 'nccl', 'gloo', etc. | 分布式通信后端
