@@ -315,6 +315,9 @@ class GPT(nn.Module):
             # forward the model to get the logits for the index in the sequence
             logits, _ = self(idx_cond)
             # pluck the logits at the final step and scale by desired temperature
+            # logits shape: (batch_size, sequence_length, vocab_size)
+            # logits[:, -1, :] 取最后一个时间步的 logits，shape: (batch_size, vocab_size)
+            # / temperature 温度缩放：温度越低，概率分布越尖锐（确定性越高）；温度越高，分布越平坦（随机性越高）
             logits = logits[:, -1, :] / temperature
             # optionally crop the logits to only the top k options
             if top_k is not None:
